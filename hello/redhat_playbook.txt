@@ -1,0 +1,45 @@
+---
+-
+         name: web server
+         hosts: localhost
+         remote_user: root
+         tasks:
+           - name: ensure apache is at the latest version
+             yum: name=httpd state=latest
+           - name: install php
+             yum: name=php state=latest
+           - name: install php-mysqli
+             yum: name=php-mysqli state=latest
+           - name: add webserver ports to fw rules
+             firewalld:
+                      port: 80/tcp
+                      zone: public
+                      permanent: true
+                      state: enabled
+           - name: restart fw
+             systemd:
+                      name: firewalld
+                      state: reloaded
+           - name: install git
+             yum: name=git state=latest
+           - name: get code
+             git:
+               repo: 'https://github.com/kodekloudhub/learning-app-ecommerce.git'
+               dest: /var/www/html/project/
+               clone: yes
+               force: yes
+           - name: amend httpd config
+             lineinfile:
+                     path: /etc/httpd/conf/httpd.conf
+                     regexp: 'DirectoryIndex index.html'
+                     line: 'DirectoryIndex index.php'
+           - name: set DB connection in php file
+             lineinfile:
+                     path: '/var/www/html/project/index.php'
+                     regexp: '\s*link = mysqli_connect*$'
+                     line: "$link = mysqli_connect('192.168.0.100', 'ecomuser', 'ecomppassword', 'ecomdb');"
+           - name: restart httpd
+             systemd:
+                      name: httpd
+                      state: reloaded
+
